@@ -1,3 +1,11 @@
+SQLite
+
+python flask 
+
+vue3+ elementplus
+
+
+
 A WEB tool for cleaning CSV:
 
 ​		 1-a template for configuring cleaning methods, 
