@@ -1,64 +1,51 @@
 <template>
-    <div>
-        <el-input v-model="template_id" placeholder="template_id"></el-input>
-        <el-upload class="upload-demo" ref="upload" :on-preview="handlePreview" :on-remove="handleRemove"
-            :file-list="fileList" :auto-upload="false" multiple="true" :on-success="handleSelected"
-            :on-change="handleSelected">
-            <el-button type="primary">选取文件</el-button>
-        </el-upload>
-        <el-button type="success" @click="submitUpload">上传到服务器</el-button>
+    <el-input v-model="template_id" placeholder="template_id"></el-input>
+    <el-upload ref="uploadRef" class="upload-demo" :auto-upload="false" :http-request="customUpload">
+        <template #trigger>
+            <el-button type="primary">Select file</el-button>
+        </template>
 
-    </div>
+        <el-button class="ml-3" type="success" @click="submitUpload">
+            Upload to server
+        </el-button>
+
+        <template #tip>
+            <div class="el-upload__tip">
+                jpg/png files with a size less than 500kb
+            </div>
+        </template>
+    </el-upload>
 </template>
-<script setup>
-import { ref, inject } from 'vue';
 
-const template_id = ref('')
-const fileList = ref([]);
-const fileListWaitUpload = ref([]);
-
+<script lang="ts" setup>
+import { reactive, ref, inject, onMounted } from 'vue'
+import type { UploadInstance, UploadRequestOptions } from 'element-plus'
 const $axios = inject("$axios");
 
-function handleSelected(file) {
-    console.log('handleSelected', file);
-    console.log(file);
-    console.log(file.name);
-    console.log(typeof file);
-    fileListWaitUpload.value.push(file.name);
-    console.log(typeof fileListWaitUpload.value);
+const uploadRef = ref<UploadInstance>()
+const template_id = ref('')
+const submitUpload = () => {
+    uploadRef.value!.submit();
 }
 
-function submitUpload() {
-    console.log('submitUpload');
-    console.log($axios)
-    try {
-        const response = $axios.post('/uploadFile', { 'data': fileListWaitUpload.value, 'templateId': template_id.value });
-        console.log(response.data);
-    } catch (error) {
-        console.error(error);
-    }
-}
+const customUpload = async (options: UploadRequestOptions) => {
+    const { file } = options;
+    if (!file) return;
 
-function handleRemove(file, fileList) {
-    console.log('handleRemove');
-    console.log(file, fileList);
-}
-
-function handlePreview(file) {
-    console.log('handlePreview');
-    console.log(file);
-    fileListWaitUpload.value = file;
-}
-
-// 处理其他参数
-function handleOtherParams(params) {
     const formData = new FormData();
-    if (typeof params === 'object' && params) {
-        Object.keys(params).forEach(k => {
-            formData.append(k, params[k]);
-        });
-    }
-    return formData;
-}
+    formData.append('file', file);
+    formData.append('template_id', template_id.value);
 
+    try {
+        await $axios.post('/uploadFile', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            },
+        })
+        alert('File uploaded successfully');
+    } catch (error) {
+        alert('File upload failed');
+        console.error('File upload failed', error);
+    }
+}
 </script>

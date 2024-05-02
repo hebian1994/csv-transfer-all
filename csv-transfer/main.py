@@ -1,8 +1,10 @@
-from flask import Flask, jsonify, request
 from flask_cors import *
 from typing import List, Dict, Any
 import sqlite3
 import json
+from flask import Flask, send_file, make_response, jsonify, request
+import pandas as pd
+from io import BytesIO
 
 from entities import UploadReq, ColTransfer, ColRename, Template
 
@@ -17,14 +19,15 @@ def log_request_params(func):
         print(f"Request: {request.method} {request.path}")
 
         # 打印请求的参数
-        if request.method == 'GET':
-            print(f"Query Params: {request.args}")
-        elif request.method == 'POST':
-            print(f"JSON Data: {request.get_json()}")
-            print(f"Form Data: {request.form}")
-
-        # 调用原始的视图函数
-        return func(*args, **kwargs)
+        try:
+            if request.method == 'GET':
+                print(f"Query Params: {request.args}")
+            elif request.method == 'POST':
+                print(f"JSON Data: {request.get_json()}")
+                print(f"Form Data: {request.form}")
+        finally:
+            # 调用原始的视图函数
+            return func(*args, **kwargs)
 
     # 更新装饰器的__name__属性，以便Flask在日志和错误处理中使用
     wrapper.__name__ = func.__name__
@@ -121,16 +124,32 @@ def template_delete_one():
 @app.route('/api/uploadFile', methods=['POST'])
 @log_request_params
 def upload():
-    # 获取请求体中的JSON数据
-    request_body: Dict = request.get_json()
+    if 'file' not in request.files:
+        return '没有文件部分', 400
+    file = request.files['file']
+    template_id = request.form['template_id']
+    print(template_id)
 
-    # 将字典数据转换为MyData对象
-    my_data = UploadReq(request_body['data'])
-    template_id = UploadReq(request_body['templateId'])
+    if file.filename.lower().endswith('.csv'):
+        df = pd.read_csv(file)
+        print(df)
+        # 生成CSV内容
+        csv_data = df.to_csv(index=False)
 
-    # TODO use the template to convert the file
+        # TODO use the template to convert the file
 
-    return jsonify({"data": "OK"})
+        # 创建一个响应对象
+        response = make_response(csv_data)
+
+        filename = 'after.csv'
+
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        response.headers["access-control-expose-headers"] = "Content-disposition"
+        response.headers["Content-type"] = "text/csv"
+
+        return response
+
+    return jsonify({"data": 'OK'})
 
 
 if __name__ == '__main__':
