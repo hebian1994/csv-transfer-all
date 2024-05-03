@@ -30,8 +30,8 @@
                 <el-col :span="5">
                     <!-- <el-input v-model="item.tranType" placeholder="type"></el-input> -->
                     <el-select v-model="item.tranType" placeholder="type">
-                        <el-option label="text: Replace A with B" value="text1"></el-option>
-                        <el-option label="text: Substring and retain [1,5]" value="text2"></el-option>
+                        <el-option label="text: Replace A with B" value="replace"></el-option>
+                        <el-option label="text: Substring and retain [1,5]" value="substring"></el-option>
                         <el-option label="date: yyyyMMdd to ddMMyyyy" value="date1"></el-option>
                         <el-option label="date: yyyy-MM-dd to ddMMyyyy" value="date2"></el-option>
                         <el-option label="decimal: Keep N decimal places" value="decimal"></el-option>

@@ -5,6 +5,7 @@ import json
 from flask import Flask, send_file, make_response, jsonify, request
 import pandas as pd
 from io import BytesIO
+import re
 
 from entities import UploadReq, ColTransfer, ColRename, Template
 
@@ -131,14 +132,59 @@ def upload():
     print(template_id)
 
     if file.filename.lower().endswith('.csv'):
-        df = pd.read_csv(file)
-        print(df)
-        # 生成CSV内容
-        csv_data = df.to_csv(index=False)
 
         # TODO use the template to convert the file
+        conn = sqlite3.connect('mydatabase.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM template WHERE id = ?", (template_id,))
+        record = c.fetchone()
+        conn.close()
+        print({"data": record[2]})
 
-        # 创建一个响应对象
+        json_str = record[2]
+        data_dict = json.loads(json_str)
+
+        template = Template(
+            data_dict['templateName'],
+            data_dict['headerLineNum'],
+            data_dict['rowDelFromHead'],
+            data_dict['rowDelFromTail'],
+            data_dict['colDeleted'],
+            [ColTransfer.from_dict(item) for item in data_dict['colTransfer']],
+            [ColRename.from_dict(item) for item in data_dict['colRename']]
+        )
+
+        print(template.headerLineNum)
+        print(template.rowDelFromHead)
+        print(template.rowDelFromTail)
+        # transfer 1
+        # df = pd.read_csv(file, header=3,
+        #                  skipfooter=6)
+        df = pd.read_csv(file, header=int(template.headerLineNum),
+                         skipfooter=int(template.rowDelFromTail))
+
+        print(df)
+
+        for item in template.colRename:
+            df.rename(columns={item.nowColName: item.newColName}, inplace=True)
+
+        for item in template.colDeleted:
+            df.drop(item, axis=1, inplace=True)
+
+        for item in template.colTransfer:
+            if item.tranType == 'replace':
+                match = re.search(r"Replace (\w+) with (\w+)", item.reg)
+                if match:
+                    x = match.group(1)
+                    y = match.group(2)
+                    print(f"x: {x}, y: {y}")
+                    df[item.colName] = df[item.colName].replace(x, y)
+                else:
+                    print("No match found")
+
+        print(df)
+        csv_data = df.to_csv(index=False)
+
         response = make_response(csv_data)
 
         filename = 'after.csv'
